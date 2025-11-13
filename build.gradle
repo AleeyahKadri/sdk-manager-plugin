@@ -1,35 +1,47 @@
 buildscript {
   repositories {
-    jcenter()
     mavenCentral()
+    gradlePluginPortal()
   }
   
   dependencies {
-    classpath 'com.bmuschko:gradle-nexus-plugin:2.3.1'
+    classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22'
   }
 }
 
-apply plugin: 'groovy'
-apply plugin: 'maven'
-apply plugin: 'com.bmuschko.nexus'
+apply plugin: 'kotlin'
+apply plugin: 'maven-publish'
 apply plugin: 'idea'
+
+// Set Kotlin compiler options
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
 
 sourceSets {
   acceptanceTest { sourceSet ->
     sourceSet.java.srcDir file('src/acceptanceTest/java')
-    sourceSet.groovy.srcDir file('src/acceptanceTest/groovy')
+    sourceSet.kotlin.srcDir file('src/acceptanceTest/kotlin')
   }
 }
 
 idea {
   module {
     testSourceDirs += file('src/acceptanceTest/java')
-    testSourceDirs += file('src/acceptanceTest/groovy')
+    testSourceDirs += file('src/acceptanceTest/kotlin')
   }
 }
 
 task acceptanceTest(type: Test) {
-  testClassesDir = sourceSets.acceptanceTest.output.classesDir
+  testClassesDirs = sourceSets.acceptanceTest.output.classesDirs
   classpath = sourceSets.acceptanceTest.runtimeClasspath
 }
 
@@ -39,72 +51,65 @@ acceptanceTest.group = JavaBasePlugin.VERIFICATION_GROUP
 
 check.dependsOn acceptanceTest
 
+repositories {
+  mavenCentral()
+}
+
 dependencies {
-  repositories {
-    mavenCentral()
-  }
+  implementation gradleApi()
+  implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
+  implementation 'com.android.tools.build:gradle:1.5.0'
+  implementation 'com.android.tools:common:25.1.0'
+  implementation 'org.rauschig:jarchivelib:0.6.0'
+  implementation 'commons-io:commons-io:2.4'
 
-  compile gradleApi()
-  compile localGroovy()
-  compile 'com.android.tools.build:gradle:1.5.0'
-  compile 'org.rauschig:jarchivelib:0.6.0'
-  compile 'commons-io:commons-io:2.4'
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation 'org.easytesting:fest-assert-core:2.0M10'
 
-  testCompile 'org.easytesting:fest-assert-core:2.0M10'
-
-  acceptanceTestCompile sourceSets.main.output
-  acceptanceTestCompile sourceSets.test.output
-  acceptanceTestCompile configurations.testCompile
-  acceptanceTestRuntime configurations.testRuntime
+  acceptanceTestImplementation sourceSets.main.output
+  acceptanceTestImplementation sourceSets.test.output
+  acceptanceTestImplementation configurations.testImplementation
+  acceptanceTestRuntimeOnly configurations.testRuntimeOnly
 }
 
 group = 'com.jakewharton.sdkmanager'
 version = '1.5.0-SNAPSHOT'
 
-install {
-  repositories.mavenInstaller {
-    pom.artifactId = 'gradle-plugin'
-  }
-}
-
-uploadArchives {
-  repositories.mavenDeployer {
-    pom.artifactId = 'gradle-plugin'
-  }
-}
-
-modifyPom {
-  project {
-    name 'SDK Manager'
-    description 'Gradle plugin which downloads and manages your Android SDK.'
-    url 'https://github.com/JakeWharton/sdk-manager-plugin'
-    inceptionYear '2014'
-
-    scm {
-      url 'https://github.com/JakeWharton/sdk-manager-plugin'
-      connection 'scm:git:git://github.com/JakeWharton/sdk-manager-plugin.git'
-      developerConnection 'scm:git:ssh://git@github.com/JakeWharton/sdk-manager-plugin.git'
-    }
-
-    licenses {
-      license {
-        name 'The Apache Software License, Version 2.0'
-        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-        distribution 'repo'
-      }
-    }
-
-    developers {
-      developer {
-        id 'jakewharton'
-        name 'Jake Wharton'
-        email 'jakewharton@gmail.com'
+publishing {
+  publications {
+    maven(MavenPublication) {
+      artifactId = 'gradle-plugin'
+      from components.java
+      
+      pom {
+        name = 'SDK Manager'
+        description = 'Gradle plugin which downloads and manages your Android SDK.'
+        url = 'https://github.com/JakeWharton/sdk-manager-plugin'
+        inceptionYear = '2014'
+        
+        scm {
+          url = 'https://github.com/JakeWharton/sdk-manager-plugin'
+          connection = 'scm:git:git://github.com/JakeWharton/sdk-manager-plugin.git'
+          developerConnection = 'scm:git:ssh://git@github.com/JakeWharton/sdk-manager-plugin.git'
+        }
+        
+        licenses {
+          license {
+            name = 'The Apache Software License, Version 2.0'
+            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+            distribution = 'repo'
+          }
+        }
+        
+        developers {
+          developer {
+            id = 'jakewharton'
+            name = 'Jake Wharton'
+            email = 'jakewharton@gmail.com'
+          }
+        }
       }
     }
   }
 }
 
-task wrapper(type: Wrapper) {
-  gradleVersion = '2.10'
-  distributionUrl = "https://services.gradle.org/distributions/gradle-${gradleVersion}-all.zip"
-}
