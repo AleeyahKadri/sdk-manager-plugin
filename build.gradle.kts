@@ -4,7 +4,6 @@ import org.gradle.plugins.ide.idea.model.IdeaModel
 
 buildscript {
   repositories {
-    jcenter()
     mavenCentral()
   }
 
